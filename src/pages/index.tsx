@@ -13,7 +13,15 @@ import {
   updateReminderConfig,
 } from '@/models/models'
 import React, { useCallback, useEffect, useState } from 'react'
-import { Box, Button, Center, Flex, Heading, Stack } from '@chakra-ui/react'
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  Heading,
+  Stack,
+  ChakraProvider,
+} from '@chakra-ui/react'
 
 import {
   ReminderConfig,
@@ -130,136 +138,138 @@ const Home: React.FC<PageProps> = () => {
   )
 
   return (
-    <Center>
-      <Flex
-        direction="column"
-        spacing={4}
-        width="100%"
-        padding={2}
-        maxW="lg"
-        minW="md"
-        minH="100vh"
-        justifyContent="space-between"
-      >
-        <Box width="100%">
+    <ChakraProvider>
+      <Center>
+        <Flex
+          direction="column"
+          spacing={4}
+          width="100%"
+          padding={2}
+          maxW="lg"
+          minW="md"
+          minH="100vh"
+          justifyContent="space-between"
+        >
+          <Box width="100%">
+            {!isSessionStarted && (
+              <>
+                <Heading size="md">Reminder Configs</Heading>
+                <Stack spacing={2}>
+                  {session?.reminders.map((r, i) => (
+                    <ReminderConfig
+                      // disable this rule as there's nothing inherently unique about reminders
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={i}
+                      initialValues={{
+                        interval: r.interval,
+                        name: r.name,
+                        todos: r.todos?.map((t) => t.name),
+                        child: !r.child
+                          ? undefined
+                          : {
+                              interval: r.child.interval,
+                              name: r.child.name,
+                              todos: r.child.todos?.map((t) => t.name),
+                            },
+                      }}
+                      onUpdate={(newValues, valid) => {
+                        if (!valid) {
+                          updateReminderValidityCallback(i, false)
+                        } else {
+                          updateReminderCallback(newValues, i)
+                        }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </>
+            )}
+            {isSessionStarted && (
+              <>
+                <Stack spacing={4}>
+                  {session?.reminders.map((r, i) => (
+                    <ActiveReminderManager
+                      reminder={r}
+                      // disable this rule as there's nothing inherently unique about reminders
+                      // eslint-disable-next-line react/no-array-index-key
+                      key={i}
+                      completeTodo={(tn: string) => {
+                        completeTodoCallback(tn, i)
+                      }}
+                      uncompleteTodo={(tn: string) => {
+                        uncompleteTodoCallback(tn, i)
+                      }}
+                      completeChildTodo={(ctn: string) => {
+                        completeChildTodoCallback(ctn, i)
+                      }}
+                      uncompleteChildTodo={(ctn: string) => {
+                        uncompleteChildTodoCallback(ctn, i)
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </>
+            )}
+          </Box>
           {!isSessionStarted && (
-            <>
-              <Heading size="md">Reminder Configs</Heading>
-              <Stack spacing={2}>
-                {session?.reminders.map((r, i) => (
-                  <ReminderConfig
-                    // disable this rule as there's nothing inherently unique about reminders
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={i}
-                    initialValues={{
-                      interval: r.interval,
-                      name: r.name,
-                      todos: r.todos?.map((t) => t.name),
-                      child: !r.child
-                        ? undefined
-                        : {
-                            interval: r.child.interval,
-                            name: r.child.name,
-                            todos: r.child.todos?.map((t) => t.name),
-                          },
-                    }}
-                    onUpdate={(newValues, valid) => {
-                      if (!valid) {
-                        updateReminderValidityCallback(i, false)
-                      } else {
-                        updateReminderCallback(newValues, i)
-                      }
-                    }}
-                  />
-                ))}
-              </Stack>
-            </>
+            <Box>
+              <Button
+                width="100%"
+                onClick={() => {
+                  addReminderCallback({
+                    name: `New reminder`,
+                    interval: 30,
+                    child: null,
+                    todos: [
+                      {
+                        name: `Look away from screen`,
+                        complete: false,
+                      },
+                      {
+                        name: `Drink water`,
+                        complete: false,
+                      },
+                      {
+                        name: `Desk yoga`,
+                        complete: false,
+                      },
+                    ],
+                    nextDue: null,
+                    completed: 0,
+                  })
+                }}
+              >
+                Add Reminder
+              </Button>
+            </Box>
           )}
-          {isSessionStarted && (
-            <>
-              <Stack spacing={4}>
-                {session?.reminders.map((r, i) => (
-                  <ActiveReminderManager
-                    reminder={r}
-                    // disable this rule as there's nothing inherently unique about reminders
-                    // eslint-disable-next-line react/no-array-index-key
-                    key={i}
-                    completeTodo={(tn: string) => {
-                      completeTodoCallback(tn, i)
-                    }}
-                    uncompleteTodo={(tn: string) => {
-                      uncompleteTodoCallback(tn, i)
-                    }}
-                    completeChildTodo={(ctn: string) => {
-                      completeChildTodoCallback(ctn, i)
-                    }}
-                    uncompleteChildTodo={(ctn: string) => {
-                      uncompleteChildTodoCallback(ctn, i)
-                    }}
-                  />
-                ))}
-              </Stack>
-            </>
-          )}
-        </Box>
-        {!isSessionStarted && (
-          <Box>
+          {session.stopped || !session.started ? (
             <Button
               width="100%"
               onClick={() => {
-                addReminderCallback({
-                  name: `New reminder`,
-                  interval: 30,
-                  child: null,
-                  todos: [
-                    {
-                      name: `Look away from screen`,
-                      complete: false,
-                    },
-                    {
-                      name: `Drink water`,
-                      complete: false,
-                    },
-                    {
-                      name: `Desk yoga`,
-                      complete: false,
-                    },
-                  ],
-                  nextDue: null,
-                  completed: 0,
-                })
+                startSessionCallback()
+              }}
+              disabled={
+                session.reminders.length === 0 ||
+                reminderValidities.some((v) => !v)
+              }
+            >
+              Start
+            </Button>
+          ) : (
+            <Button
+              width="100%"
+              borderRadius={0}
+              onClick={() => {
+                stopSessionCallback()
               }}
             >
-              Add Reminder
+              Stop
             </Button>
-          </Box>
-        )}
-        {session.stopped || !session.started ? (
-          <Button
-            width="100%"
-            onClick={() => {
-              startSessionCallback()
-            }}
-            disabled={
-              session.reminders.length === 0 ||
-              reminderValidities.some((v) => !v)
-            }
-          >
-            Start
-          </Button>
-        ) : (
-          <Button
-            width="100%"
-            borderRadius={0}
-            onClick={() => {
-              stopSessionCallback()
-            }}
-          >
-            Stop
-          </Button>
-        )}
-      </Flex>
-    </Center>
+          )}
+        </Flex>
+      </Center>
+    </ChakraProvider>
   )
 }
 
