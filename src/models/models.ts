@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
 export interface Session {
   started: Date | null
   stopped: Date | null
